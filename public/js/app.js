@@ -6,6 +6,14 @@ function defaultAvatar(n) { return `https://ui-avatars.com/api/?name=${encodeURI
 function navigate(h) { window.location.hash = h; }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+
+function getBadge(role, badge) {
+  if (badge) return ' <span style="background:linear-gradient(135deg,#ffd700,#ff6b35);color:#000;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700">' + badge + '</span>';
+  if (role === 'admin') return ' <span style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700">מנהל</span>';
+  if (role === 'mod') return ' <span style="background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700">מודרטור</span>';
+  if (role === 'vip') return ' <span style="background:linear-gradient(135deg,#f1c40f,#f39c12);color:#000;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700">VIP</span>';
+  return '';
+}
 function updateNav() {
   const nav = $('#nav');
   nav.innerHTML = currentUser
@@ -50,7 +58,7 @@ async function loadPosts(page = 1, sort = 'newest') {
         <div class="post-card-body">
           <div class="post-card-title">${escapeHtml(p.title)}</div>
           <div class="post-card-meta">
-            <div class="post-card-author"><img src="${p.avatar || defaultAvatar(p.display_name)}"><span style="color:${p.display_color}">${escapeHtml(p.display_name)}</span></div>
+            <div class="post-card-author"><img src="${p.avatar || defaultAvatar(p.display_name)}"><span style="color:${p.display_color}">${escapeHtml(p.display_name)}${getBadge(p.role,p.badge)}</span></div>
             <div class="post-card-stats"><span>❤️ ${p.like_count}</span><span>💬 ${p.comment_count}</span><span>👁️ ${p.views}</span></div>
           </div>
         </div>
@@ -203,7 +211,7 @@ async function renderPost(id) {
         ${post.cover_image ? `<img class="post-view-cover" src="${post.cover_image}">` : ''}
         <div class="post-view-header">
           <h1 class="post-view-title">${escapeHtml(post.title)}</h1>
-          <div class="post-view-meta"><img src="${post.avatar || defaultAvatar(post.display_name)}"><span style="color:${post.display_color};font-weight:600">${escapeHtml(post.display_name)}</span><span>· לפני ${timeAgo(post.created_at)}</span><span>· 👁️ ${post.views}</span></div>
+          <div class="post-view-meta"><img src="${post.avatar || defaultAvatar(post.display_name)}"><span style="color:${post.display_color};font-weight:600">${escapeHtml(post.display_name)}${getBadge(post.role,post.badge)}</span><span>· לפני ${timeAgo(post.created_at)}</span><span>· 👁️ ${post.views}</span></div>
         </div>
         <div class="post-view-content">${post.content}</div>
         <div class="post-actions">
@@ -215,7 +223,7 @@ async function renderPost(id) {
           <h3>💬 תגובות (${comments.length})</h3>
           ${currentUser ? `<div class="comment-box"><input type="text" id="commentInput" placeholder="כתוב תגובה..." onkeydown="if(event.key==='Enter')addComment(${post.id})"><button class="btn btn-primary" onclick="addComment(${post.id})">שלח</button></div>` : '<p style="color:var(--text2);margin:10px 0"><a href="#login">התחבר</a> כדי להגיב</p>'}
           <div id="commentsList" style="margin-top:16px">${comments.map(c => `
-            <div class="comment"><div class="comment-header"><img src="${c.avatar || defaultAvatar(c.display_name)}"><span class="name" style="color:${c.display_color}">${escapeHtml(c.display_name)}</span><span class="time">· לפני ${timeAgo(c.created_at)}</span></div><div>${escapeHtml(c.content)}</div></div>`).join('')}</div>
+            <div class="comment"><div class="comment-header"><img src="${c.avatar || defaultAvatar(c.display_name)}"><span class="name" style="color:${c.display_color}">${escapeHtml(c.display_name)}${getBadge(c.role,c.badge)}</span><span class="time">· לפני ${timeAgo(c.created_at)}</span></div><div>${escapeHtml(c.content)}</div></div>`).join('')}</div>
         </div>
       </div>`;
   } catch { $('#app').innerHTML = '<div class="empty-state"><h3>פוסט לא נמצא</h3><a href="#home">חזרה</a></div>'; }

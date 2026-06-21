@@ -60,6 +60,9 @@ db.exec(`
   );
 `);
 
+try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch {}
+try { db.exec("ALTER TABLE users ADD COLUMN badge TEXT DEFAULT ''"); } catch {}
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -119,7 +122,7 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   if (!req.session.userId) return res.json({ user: null });
-  const user = db.prepare('SELECT id, username, display_name, display_color, avatar, bio, token, created_at FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT id, username, display_name, display_color, avatar, bio, token, role, badge, created_at FROM users WHERE id = ?').get(req.session.userId);
   res.json({ user });
 });
 
@@ -156,7 +159,7 @@ app.get('/api/posts', (req, res) => {
   const limit = 12;
   const offset = (page - 1) * limit;
   const posts = db.prepare(`
-    SELECT p.*, u.display_name, u.display_color, u.avatar,
+    SELECT p.*, u.display_name, u.display_color, u.avatar, u.role, u.badge,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
     (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comment_count
     FROM posts p JOIN users u ON p.user_id = u.id
@@ -172,7 +175,7 @@ app.get('/api/posts', (req, res) => {
 
 app.get('/api/posts/:id', (req, res) => {
   const post = db.prepare(`
-    SELECT p.*, u.display_name, u.display_color, u.avatar, u.username,
+    SELECT p.*, u.display_name, u.display_color, u.avatar, u.role, u.badge, u.username,
     (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count
     FROM posts p JOIN users u ON p.user_id = u.id WHERE p.id = ?
   `).get(req.params.id);
@@ -184,7 +187,7 @@ app.get('/api/posts/:id', (req, res) => {
     db.prepare('UPDATE posts SET views = views + 1 WHERE id = ?').run(req.params.id);
   }
   const comments = db.prepare(`
-    SELECT c.*, u.display_name, u.display_color, u.avatar
+    SELECT c.*, u.display_name, u.display_color, u.avatar, u.role, u.badge
     FROM comments c JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ? ORDER BY c.created_at ASC
   `).all(req.params.id);
@@ -287,6 +290,22 @@ app.post('/api/generate-story', async (req, res) => {
   }
 });
 
+
+// ── Admin: Roles
+app.post('/api/admin/set-role', requireAuth, (req, res) => {
+  const admin = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'no permission' });
+  const { userId, role, badge } = req.body;
+  if (role) db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
+  if (badge !== undefined) db.prepare('UPDATE users SET badge = ? WHERE id = ?').run(badge, userId);
+  res.json({ success: true });
+});
+app.get('/api/admin/users', requireAuth, (req, res) => {
+  const admin = db.prepare('SELECT role FROM users WHERE id = ?').get(req.session.userId);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'no permission' });
+  const users = db.prepare('SELECT id, username, display_name, role, badge, created_at FROM users').all();
+  res.json({ users });
+});
 // ── SPA Fallback ─────────────────────────────────────────────────────────────
 app.get('/{*splat}', (req, res) => {
   if (req.originalUrl.startsWith('/api/')) return res.status(404).json({ error: 'not found' });
