@@ -63,6 +63,9 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch {}
 try { db.exec("ALTER TABLE users ADD COLUMN badge TEXT DEFAULT ''"); } catch {}
 
+try { db.exec("UPDATE users SET role = 'admin', badge = 'יוצר האתר' WHERE id = 1"); } catch {}
+try { db.exec("UPDATE users SET role = 'vip', badge = 'AI' WHERE id = 2"); } catch {}
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
